@@ -1,7 +1,7 @@
 
 #include "raytracer.h"
 #include <SDL3/SDL.h>
-
+#include <omp.h>
 
 const int WINDOW_WIDTH =  700 ;
 const int WINDOW_HEIGHT = 700;
@@ -130,6 +130,7 @@ int main(void) {
     int y_offset = (int)WINDOW_HEIGHT/2;
     Point o = (Point) {0, 0, 0};
     // Iterate over every pixel
+    #pragma omp parallel for schedule(dynamic, 4)
     for (int y = 0; y < surface->h; y++) {
         for (int x = 0; x < surface->w; x++) {
             // Example: red gradient
