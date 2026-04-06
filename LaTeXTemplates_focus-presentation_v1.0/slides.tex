@@ -1,9 +1,13 @@
 \documentclass{beamer}
 
-\usetheme{focus}
+
+\usetheme[nofirafonts]{focus}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{adjustbox}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 
 \graphicspath{{../img/}{Images/}}
 
@@ -66,40 +70,14 @@ for each pixel do
 \end{verbatim}
 \end{frame}
 
-\begin{frame}{Architecture}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{architecture.png}
-\end{center}
-\end{frame}
-
-\begin{frame}{Core Helper Functions}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{corediagram.png}
-\end{center}
-\end{frame}
-
-\begin{frame}{Utility Functions Diagram}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{utilsdiagram.png}
-\end{center}
-\end{frame}
-
-\begin{frame}{Light Model Diagram}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{lightdigram.png}
-\end{center}
-\end{frame}
-
-\begin{frame}{Point Structure Diagram}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{pointdiagram.png}
-\end{center}
-\end{frame}
-
-\begin{frame}{Sphere Structure Diagram}
-\begin{center}
-\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{spherediagram.png}
-\end{center}
+\begin{frame}{Incremental improvement of Ray Tracer}
+	\centering
+	\begin{tabular}{ccc}
+		\textbf{Without shader} & \textbf{With shader} & \textbf{Full} \\
+		\includegraphics[width=0.28\textwidth]{plain_raytrace.png} &
+		\includegraphics[width=0.28\textwidth]{raytraced_shading.png} &
+		\includegraphics[width=0.28\textwidth]{raytraced_demo.png}
+	\end{tabular}
 \end{frame}
 
 \begin{frame}{Color Model (RGB)}
@@ -234,6 +212,250 @@ P + t\vec L
 \item Low recursion depths (e.g., 3) often give good visual quality.
 \end{itemize}
 \end{frame}
+
+\begin{frame}{Architecture}
+\begin{center}
+\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{architecture.png}
+\end{center}
+\end{frame}
+
+
+\begin{frame}{Flowchart: \texttt{closestSphere(...)} (Part 1/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=50mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=31mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {Start};
+\node[process, below=of start] (init) {$c\_t[0]\leftarrow \infty$};
+\node[decision, below=of init] (forcond) {$i<n\_spheres$?};
+\node[process, below=of forcond] (get) {$sphere\leftarrow s\_arr[i]$; $t\leftarrow$ instersectSphere$(o,d,sphere)$};
+\node[decision, below=of get] (chk0) {$t$ exists and $t[0]\in[tmin,tmax]$\\and $t[0]<c\_t[0]$?};
+\node[process, below=of chk0] (upd0) {$c\_t[0]\leftarrow t[0]$; $closest\_s[0]\leftarrow sphere$};
+\node[startstop, below=of upd0] (goto2) {Part 2 continuation};
+\node[startstop, right=25mm of forcond] (end) {return via pointers};
+
+\draw[line] (start) -- (init);
+\draw[line] (init) -- (forcond);
+\draw[line] (forcond) -- node[left]{yes} (get);
+\draw[line] (forcond) -- node[above]{no} (end);
+\draw[line] (get) -- (chk0);
+\draw[line] (chk0) -- node[right]{yes} (upd0);
+\draw[line] (chk0.east) -- ++(12mm,0) |- node[right,pos=0.2]{no} (goto2.east);
+\draw[line] (upd0) -- (goto2);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Flowchart: \texttt{closestSphere(...)} (Part 2/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=50mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=31mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {From Part 1};
+\node[decision, below=of start] (chk1) {$t$ exists and $t[1]\in[tmin,tmax]$\\and $t[1]<c\_t[0]$?};
+\node[process, below=of chk1] (upd1) {$c\_t[0]\leftarrow t[1]$; $closest\_s[0]\leftarrow sphere$};
+\node[process, below=of upd1] (freei) {free$(t)$; $i\leftarrow i+1$};
+\node[decision, below=of freei] (forcond) {$i<n\_spheres$?};
+\node[process, below=of forcond] (loop) {next sphere:\\$sphere\leftarrow s\_arr[i]$, $t\leftarrow$ instersectSphere$(...)$};
+\node[startstop, right=25mm of forcond] (end) {return via pointers};
+
+\draw[line] (start) -- (chk1);
+\draw[line] (chk1) -- node[right]{yes} (upd1);
+\draw[line] (chk1.east) -- ++(12mm,0) |- node[right,pos=0.2]{no} (freei.east);
+\draw[line] (upd1) -- (freei);
+\draw[line] (freei) -- (forcond);
+\draw[line] (forcond) -- node[left]{yes} (loop);
+\draw[line] (forcond) -- node[above]{no} (end);
+\draw[line] (loop.west) -- ++(-15mm,0) |- (start.west);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+
+\begin{frame}{Flowchart: \texttt{tli(...)} (Part 1/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=46mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=30mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {Start};
+\node[process, below=of start] (init) {$c\_intensity\leftarrow 0$; allocate shadow variables};
+\node[decision, below=of init] (forcond) {$i < no\_lights$?};
+\node[process, below=of forcond] (getlight) {$light\leftarrow l\_arr[i]$};
+\node[decision, below=of getlight] (ambient) {$light.k=='a'$?};
+\node[process, below=of ambient] (addamb) {$c\_intensity {+}{=} light.i$; $i\leftarrow i+1$};
+\node[decision, below=of addamb] (loopback) {next light?};
+\node[process, right=23mm of ambient] (cont) {Part 2:\\handle point/directional\\+ shadow check + contributions};
+\node[startstop, below=of loopback] (ret) {Part 2 entry / return path};
+
+\draw[line] (start) -- (init);
+\draw[line] (init) -- (forcond);
+\draw[line] (forcond) -- node[right]{yes} (getlight);
+\draw[line] (forcond.west) -- ++(-12mm,0) |- node[left,pos=0.2]{no} (ret.west);
+\draw[line] (getlight) -- (ambient);
+\draw[line] (ambient) -- node[right]{yes} (addamb);
+\draw[line] (ambient.east) -- node[above]{no} (cont.west);
+\draw[line] (addamb) -- (loopback);
+\draw[line] (loopback.west) -- ++(-14mm,0) |- (forcond.west);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Flowchart: \texttt{tli(...)} (Part 2/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=47mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=30mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {From Part 1 (non-ambient light)};
+\node[decision, below=of start] (ispoint) {$light.k=='p'$?};
+\node[process, below left=7mm and 16mm of ispoint] (setpoint) {$l\leftarrow light.v-p$\\$tmax\leftarrow 1$};
+\node[process, below right=7mm and 16mm of ispoint] (setdir) {$l\leftarrow light.v$\\$tmax\leftarrow \infty$};
+\node[process, below=14mm of ispoint] (shadow) {closestSphere$(p,l,\epsilon,tmax,...,shadow\_s,shadow\_t)$};
+\node[decision, below=of shadow] (clear) {$shadow\_t[0]$ is $\infty$?};
+\node[process, below=of clear] (add) {$c\_intensity {+}{=}$ specularI$(...,light.i,s)$\\$+\,$diffuseI$(normal,l,light.i)$};
+\node[process, below=of add] (inc) {$i\leftarrow i+1$};
+\node[decision, below=of inc] (more) {$i<no\_lights$?};
+\node[process, right=24mm of more] (freev) {free shadow vars\\return $c\_intensity$};
+
+\draw[line] (start) -- (ispoint);
+\draw[line] (ispoint) -- node[above left]{yes} (setpoint);
+\draw[line] (ispoint) -- node[above right]{no} (setdir);
+\draw[line] (setpoint.south) |- (shadow.west);
+\draw[line] (setdir.south) |- (shadow.east);
+\draw[line] (shadow) -- (clear);
+\draw[line] (clear) -- node[right]{yes} (add);
+\draw[line] (clear.east) -- ++(12mm,0) |- node[right,pos=0.2]{no} (inc.east);
+\draw[line] (add) -- (inc);
+\draw[line] (inc) -- (more);
+\draw[line] (more.west) -- ++(-14mm,0) |- node[left,pos=0.2]{yes} (start.west);
+\draw[line] (more) -- node[above]{no} (freev);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Flowchart: \texttt{rtx\_inner(...)} (Part 1/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=50mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=31mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {Start};
+\node[process, below=of start] (init) {init intensities to 0; allocate $t$};
+\node[process, below=of init] (closest) {closestSphere$(o,d,tmin,tmax,...,sphere,t)$};
+\node[decision, below=of closest] (hit) {$t[0]$ finite?};
+\node[process, below=of hit] (base) {compute $p=o+t[0]d$, $normal=p-sphere\to c$};
+\node[process, below=of base] (local) {$objintensity\leftarrow$ tli$(normal,p,o,sphere\to s,...)$};
+\node[decision, below=of local] (reflq) {$sphere\to s>0$ and $limit>0$?};
+\node[startstop, below=of reflq] (goto2) {Part 2 continuation};
+\node[process, right=25mm of hit] (retinf) {free $t$; return $\infty$};
+
+\draw[line] (start) -- (init);
+\draw[line] (init) -- (closest);
+\draw[line] (closest) -- (hit);
+\draw[line] (hit) -- node[left]{yes} (base);
+\draw[line] (hit) -- node[above]{no} (retinf);
+\draw[line] (base) -- (local);
+\draw[line] (local) -- (reflq);
+\draw[line] (reflq) -- (goto2);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+\begin{frame}{Flowchart: \texttt{rtx\_inner(...)} (Part 2/2)}
+\centering
+\scriptsize
+\begin{adjustbox}{max totalsize={0.95\linewidth}{0.72\textheight},center}
+\begin{tikzpicture}[
+	node distance=4.5mm,
+	>=Latex,
+	every node/.style={align=center},
+	startstop/.style={ellipse, draw, minimum width=19mm, minimum height=6mm},
+	process/.style={rectangle, draw, rounded corners, minimum width=52mm, minimum height=6mm},
+	decision/.style={diamond, draw, aspect=2.1, inner sep=1pt, minimum width=31mm, minimum height=7mm},
+	line/.style={->, thick}
+]
+\node[startstop] (start) {From Part 1};
+\node[decision, below=of start] (reflq) {$sphere\to s>0$ and $limit>0$?};
+\node[process, below=of reflq] (refl) {compute reflected direction;\\$otherintensity\leftarrow$ rtx\_inner$(...,limit-1,newsphere)$};
+\node[decision, below=of refl] (valid) {$otherintensity$ finite?};
+\node[process, below=of valid] (blend) {$objintensity\leftarrow objintensity(1-rfl)+otherintensity\cdot rfl$};
+\node[process, below=of blend] (retobj) {free allocations; return $objintensity$};
+\node[process, right=26mm of reflq] (retlocal) {free allocations;\\return $objintensity$};
+
+\draw[line] (start) -- (reflq);
+\draw[line] (reflq) -- node[left]{yes} (refl);
+\draw[line] (reflq) -- node[above]{no} (retlocal);
+\draw[line] (refl) -- (valid);
+\draw[line] (valid) -- node[right]{yes} (blend);
+\draw[line] (valid.east) -- ++(12mm,0) |- node[right,pos=0.2]{no} (retobj.east);
+\draw[line] (blend) -- (retobj);
+\end{tikzpicture}
+\end{adjustbox}
+\end{frame}
+
+
+\begin{frame}{Light Model Diagram}
+\begin{center}
+\includegraphics[width=0.92\linewidth,height=0.72\textheight,keepaspectratio]{lightType.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Point Structure Diagram}
+\begin{center}
+\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{pointType.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Sphere Structure Diagram}
+\begin{center}
+\includegraphics[width=0.99\linewidth,height=0.72\textheight,keepaspectratio]{sphereType.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Utility Functions Diagram}
+\begin{center}
+\includegraphics[width=0.88\linewidth,height=0.72\textheight,keepaspectratio]{RGBType.png}
+\end{center}
+\end{frame}
+
 
 \begin{frame}{Experiments}
 \begin{enumerate}
