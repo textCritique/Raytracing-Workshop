@@ -176,8 +176,8 @@ double tli(Point normal, Point p, Point o, int s, int no_lights, Light l_arr[], 
       l = light.v;
       tmax = INFINITY;
     }
-    c_intensity += specularI(o, p, normal, l, i, s);
-    c_intensity += diffuseI(normal, l, i);
+    c_intensity += specularI(o, p, normal, l, light.i, s);
+    c_intensity += diffuseI(normal, l, light.i);
   }
   free(shadow_s), free(shadow_t);
   return c_intensity;
