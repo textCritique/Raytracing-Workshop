@@ -180,8 +180,8 @@ double tli(Point normal, Point p, Point o, int s, int no_lights, Light l_arr[], 
     closestSphere(p, l, 0.000001, tmax, no_spheres, s_arr, shadow_s, shadow_t);
     if (isinf(shadow_t[0])){
       // if not, add that light's contribution 
-      c_intensity += specularI(o, p, normal, l, i, s);
-      c_intensity += diffuseI(normal, l, i);
+      c_intensity += specularI(o, p, normal, l, light.i, s);
+      c_intensity += diffuseI(normal, l, light.i);
     }
   }
   free(shadow_s), free(shadow_t);
