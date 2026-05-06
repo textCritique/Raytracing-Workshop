@@ -88,7 +88,7 @@ int main(void) {
   /* One ray per pixel. */
   for (int y = 0; y < surface->h; y++) {
     for (int x = 0; x < surface->w; x++) {
-      Point v = g_to_viewport(-x + x_offset, -y + y_offset,
+      Point v = g_to_viewport(x - x_offset, -y + y_offset,
                                WINDOW_WIDTH, WINDOW_HEIGHT);
       Point d = sub3(v, o);
       RGB rgb = rtx(o, d, 1.0, INFINITY, num_spheres, spheres);
